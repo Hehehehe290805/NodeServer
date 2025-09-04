@@ -3,77 +3,27 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>File Server</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background: #f4f4f9;
-            color: #333;
-            text-align: center;
-        }
-
-        h1 {
-            color: #444;
-        }
-
-        .container {
-            max-width: 500px;
-            margin: auto;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        form {
-            margin: 20px 0;
-        }
-
-        input[type="file"] {
-            margin: 10px 0;
-        }
-
-        button {
-            background: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        button:hover {
-            background: #45a049;
-        }
-
-        a {
-            display: inline-block;
-            margin-top: 15px;
-            text-decoration: none;
-            color: #007BFF;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-    </style>
+    <title>File Manager</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <div class="container">
-        <h1>📂 File Server</h1>
-        <p>Upload and manage your files</p>
+    <h1>📂 File Upload & Manager</h1>
 
-        <form action="/upload" method="post" enctype="multipart/form-data">
+    <section id="upload-section">
+        <h2>⬆ Upload a File</h2>
+        <form id="uploadForm">
             <input type="file" name="myFile" required>
-            <br>
-            <button type="submit">⬆ Upload File</button>
+            <button type="submit">Upload</button>
         </form>
+    </section>
 
-        <a href="/files">📜 View Uploaded Files</a>
-    </div>
+    <section id="files-section">
+        <h2>📄 Uploaded Files</h2>
+        <ul id="fileList"></ul>
+    </section>
+
+    <script src="script.js"></script>
 </body>
 
 </html>
