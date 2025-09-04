@@ -44,12 +44,35 @@ const upload = multer({ storage, fileFilter });
 app.get('/upload', (req, res) => {
     res.send(`
         <h2>File Upload</h2>
-        <form action="/upload" method="post" enctype="multipart/form-data">
-            <input type="file" name="myFile" />
+        <form id="uploadForm" enctype="multipart/form-data">
+            <input type="file" name="myFile" required />
             <button type="submit">Upload</button>
         </form>
+        <p id="msg"></p>
+
+        <script>
+            const form = document.getElementById("uploadForm");
+            const msg = document.getElementById("msg");
+
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const formData = new FormData(form);
+
+                try {
+                    const res = await fetch("/upload", {
+                        method: "POST",
+                        body: formData
+                    });
+                    const text = await res.text();
+                    alert(text); // ✅ Popup after upload
+                } catch (err) {
+                    alert("❌ Upload failed: " + err.message);
+                }
+            });
+        </script>
     `);
 });
+
 
 // Handle file upload
 app.post('/upload', upload.single('myFile'), (req, res) => {
@@ -68,6 +91,7 @@ app.use((err, req, res, next) => {
 });
 
 // List all uploaded files with size and type
+// List all uploaded files with preview
 app.get('/files', (req, res) => {
     fs.readdir(uploadDir, (err, files) => {
         if (err) return res.status(500).send("Error reading uploads folder");
@@ -75,24 +99,41 @@ app.get('/files', (req, res) => {
         let fileLinks = files.map(file => {
             const filePath = path.join(uploadDir, file);
             const stats = fs.statSync(filePath);
-            const size = (stats.size / 1024).toFixed(2) + " KB"; // file size in KB
-            const type = mime.lookup(file) || "unknown"; // file MIME type
+            const size = (stats.size / 1024).toFixed(2) + " KB";
+            const type = mime.lookup(file) || "unknown";
 
-            return `<li>
+            let preview = "";
+
+            if (type.startsWith("image/")) {
+                preview = `<img src="/files/${file}" alt="${file}" style="max-width:100px; max-height:100px; border:1px solid #ccc;"/>`;
+            } else if (type === "application/pdf") {
+                preview = `📄`;
+            } else if (type === "text/plain") {
+                preview = `📃`;
+            } else {
+                preview = `📦`;
+            }
+
+            return `<li style="margin-bottom:10px;">
+                        ${preview}<br/>
                         <a href="/files/${file}" download>${file}</a>
                         - ${size} (${type})
+                        <form action="/delete/${file}" method="post" style="display:inline;">
+                            <button type="submit">🗑 Delete</button>
+                        </form>
                     </li>`;
         }).join("");
 
         res.send(`
             <h2>Uploaded Files</h2>
-            <ul>
+            <ul style="list-style:none; padding:0;">
                 ${fileLinks || "<li>No files uploaded yet.</li>"}
             </ul>
             <a href="/upload">⬆ Upload more files</a>
         `);
     });
 });
+
 
 
 // Serve uploaded files for download
