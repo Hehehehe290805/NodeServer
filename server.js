@@ -1,4 +1,3 @@
-const http = require('http');
 const express = require('express');
 const multer = require('multer');
 const fs = require('fs');
@@ -7,38 +6,19 @@ const mime = require('mime-types');
 
 const app = express();
 
-const server = http.createServer((req, res) => {
-    let filePath = path.join(__dirname, 'public', req.url === '/' ? 'index.html' : req.url);
-    
-    fs.readFile(filePath, (err, content) => {
-        if (err) {
-            if (err.code === 'ENOENT') {
-                res.writeHead(404, { 'Content-Type': 'text/html' });
-                res.end('<h1>404 Not Found</h1>', 'utf8');
-            } else {
-                res.writeHead(500);
-                res.end(`Server Error: ${err.code}`);
-            }
-            return;
-        } else {
-            res.writeHead(200, { 'Content-Type': mime.lookup(filePath) });
-            res.end(content, 'utf8');
-        }        
-    });
-});
+// Serve static files from "public"
+app.use(express.static(path.join(__dirname, 'public')));
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
-
+// Upload Directory Setup
 const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)){
+if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir);
 }
 
+// Allowed file types
 const allowedTypes = ['jpeg', 'png', 'gif', 'jpg', 'pdf', 'txt'];
 
+// Multer storage and file filter configuration
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, uploadDir);
@@ -48,6 +28,7 @@ const storage = multer.diskStorage({
     }
 });
 
+// File filter to allow only specific file types
 const fileFilter = (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (allowedTypes.includes(ext.slice(1))) {
@@ -59,6 +40,7 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter });
 
+// Upload form
 app.get('/upload', (req, res) => {
     res.send(`
         <h2>File Upload</h2>
@@ -69,10 +51,12 @@ app.get('/upload', (req, res) => {
     `);
 });
 
+// Handle file upload
 app.post('/upload', upload.single('myFile'), (req, res) => {
-    res.send(`File uploaded successfully. File name: ${req.file.filename}`);
+    res.send(`✅ File uploaded successfully: ${req.file.filename}`);
 });
 
+// Error handling
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError) {
         res.status(400).send('Upload error: ' + err.message);
@@ -81,4 +65,63 @@ app.use((err, req, res, next) => {
     } else {
         next();
     }
+});
+
+// List all uploaded files with size and type
+app.get('/files', (req, res) => {
+    fs.readdir(uploadDir, (err, files) => {
+        if (err) return res.status(500).send("Error reading uploads folder");
+
+        let fileLinks = files.map(file => {
+            const filePath = path.join(uploadDir, file);
+            const stats = fs.statSync(filePath);
+            const size = (stats.size / 1024).toFixed(2) + " KB"; // file size in KB
+            const type = mime.lookup(file) || "unknown"; // file MIME type
+
+            return `<li>
+                        <a href="/files/${file}" download>${file}</a>
+                        - ${size} (${type})
+                    </li>`;
+        }).join("");
+
+        res.send(`
+            <h2>Uploaded Files</h2>
+            <ul>
+                ${fileLinks || "<li>No files uploaded yet.</li>"}
+            </ul>
+            <a href="/upload">⬆ Upload more files</a>
+        `);
+    });
+});
+
+
+// Serve uploaded files for download
+app.get('/files/:filename', (req, res) => {
+    const filePath = path.join(uploadDir, req.params.filename);
+
+    if (fs.existsSync(filePath)) {
+        res.download(filePath); // triggers download
+    } else {
+        res.status(404).send("File not found");
+    }
+});
+
+// Handle file deletion
+app.post('/delete/:filename', (req, res) => {
+    const filePath = path.join(uploadDir, req.params.filename);
+
+    if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath); // delete the file
+        res.redirect('/files'); // go back to file list
+    } else {
+        res.status(404).send("File not found");
+    }
+});
+
+
+
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
