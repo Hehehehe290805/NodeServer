@@ -1,8 +1,45 @@
-# Ignore uploaded files
+# === Project-specific ignores ===
+# Ignore uploads
 uploads/
 
-# Node.js dependencies
+# Ignore dependencies
 node_modules/
 
-# Logs
+# Ignore logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignore weird nested lock file
+node_modules/.package-lock.json
+
+
+# === General useful ignores ===
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Editor files
+.vscode/
+.idea/
+
+# Coverage reports
+coverage/
+*.lcov
+
+# Build outputs
+dist/
+build/
+.cache/
