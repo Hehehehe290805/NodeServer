@@ -40,7 +40,7 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter });
 
-// ✅ Handle single OR multiple file uploads
+// ✅ Handle single OR multiple file uploads (one portal)
 app.post('/upload', upload.array('myFiles', 20), (req, res) => {
     if (!req.files || req.files.length === 0) {
         return res.status(400).json({ error: "No files uploaded" });
