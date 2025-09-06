@@ -84,6 +84,29 @@
             border-radius: 4px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
         }
+
+        /* ✅ Progress bar */
+        #progressWrapper {
+            width: 100%;
+            background: #ddd;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+            height: 20px;
+            overflow: hidden;
+        }
+
+        #progressBar {
+            height: 100%;
+            width: 0%;
+            background: #28a745;
+            text-align: center;
+            color: white;
+            font-size: 12px;
+            line-height: 20px;
+            border-radius: 5px 0 0 5px;
+            transition: width 0.3s ease;
+        }
     </style>
 </head>
 
@@ -96,6 +119,9 @@
             <input type="file" name="myFiles" multiple required>
             <button type="submit">Upload</button>
         </form>
+        <div id="progressWrapper">
+            <div id="progressBar">0%</div>
+        </div>
         <p id="uploadStatus"></p>
     </div>
 
@@ -126,27 +152,46 @@
         const filesTableBody = document.querySelector('#filesTable tbody');
         const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
         const selectAll = document.getElementById('selectAll');
+        const progressWrapper = document.getElementById('progressWrapper');
+        const progressBar = document.getElementById('progressBar');
 
-        // Handle file upload
+        // Handle file upload with progress
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(uploadForm);
 
-            try {
-                const res = await fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await res.json();
-                if (data.success) {
-                    uploadStatus.textContent = `✅ Uploaded ${data.files.length} file(s) successfully!`;
-                    loadFiles();
-                } else {
-                    uploadStatus.textContent = "❌ Upload failed: " + data.error;
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", "/upload", true);
+
+            // Progress tracking
+            xhr.upload.onprogress = (event) => {
+                if (event.lengthComputable) {
+                    const percent = Math.round((event.loaded / event.total) * 100);
+                    progressWrapper.style.display = "block";
+                    progressBar.style.width = percent + "%";
+                    progressBar.textContent = percent + "%";
                 }
-            } catch (err) {
-                uploadStatus.textContent = "❌ Error uploading file.";
-            }
+            };
+
+            xhr.onload = () => {
+                progressWrapper.style.display = "none";
+                progressBar.style.width = "0%";
+                progressBar.textContent = "0%";
+
+                if (xhr.status === 200) {
+                    const data = JSON.parse(xhr.responseText);
+                    if (data.success) {
+                        uploadStatus.textContent = `✅ Uploaded ${data.files.length} file(s) successfully!`;
+                        loadFiles();
+                    } else {
+                        uploadStatus.textContent = "❌ Upload failed: " + data.error;
+                    }
+                } else {
+                    uploadStatus.textContent = "❌ Error uploading file.";
+                }
+            };
+
+            xhr.send(formData);
         });
 
         // Load files list
@@ -158,7 +203,6 @@
             files.forEach(file => {
                 const row = document.createElement('tr');
 
-                // Show thumbnail if image, otherwise text link
                 let previewContent;
                 if (file.type.startsWith("image/")) {
                     previewContent = `<a href="/files/${file.name}" target="_blank">
@@ -179,7 +223,6 @@
                 filesTableBody.appendChild(row);
             });
 
-            // Reset master checkbox each reload
             selectAll.checked = false;
         }
 
@@ -224,7 +267,7 @@
             }
         });
 
-        // Master checkbox (select/unselect all)
+        // Master checkbox
         selectAll.addEventListener('change', () => {
             const checkboxes = document.querySelectorAll('.fileCheckbox');
             checkboxes.forEach(cb => cb.checked = selectAll.checked);
