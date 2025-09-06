@@ -21,7 +21,11 @@ const allowedTypes = ['jpeg', 'png', 'gif', 'jpg', 'pdf', 'txt'];
 // ✅ Multer storage and filter
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadDir),
-    filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        const base = path.basename(file.originalname, ext); // filename without extension
+        cb(null, `${base}-${Date.now()}${ext}`);
+    }
 });
 
 const fileFilter = (req, file, cb) => {
