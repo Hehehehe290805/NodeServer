@@ -39,9 +39,32 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter });
 
-// ✅ Handle file upload
-app.post('/upload', upload.single('myFile'), (req, res) => {
-    res.json({ success: true, filename: req.file.filename });
+// ✅ Handle single OR multiple file uploads
+app.post('/upload', upload.fields([
+    { name: 'myFile', maxCount: 1 },     // single file
+    { name: 'myFiles', maxCount: 10 }    // multiple files
+]), (req, res) => {
+    const allFiles = [];
+
+    if (req.files.myFile) {
+        allFiles.push(...req.files.myFile);
+    }
+    if (req.files.myFiles) {
+        allFiles.push(...req.files.myFiles);
+    }
+
+    if (allFiles.length === 0) {
+        return res.status(400).json({ error: "No files uploaded" });
+    }
+
+    const uploadedFiles = allFiles.map(file => ({
+        originalName: file.originalname,
+        filename: file.filename,
+        size: (file.size / 1024).toFixed(2) + " KB",
+        type: mime.lookup(file.originalname) || "unknown"
+    }));
+
+    res.json({ success: true, files: uploadedFiles });
 });
 
 // ✅ List uploaded files with details

@@ -78,19 +78,37 @@
         .preview-link:hover {
             text-decoration: underline;
         }
+
+        .thumb {
+            max-height: 60px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
     </style>
 </head>
 
 <body>
     <h1>📂 File Upload & Management</h1>
 
+    <!-- Single file upload -->
     <div class="upload-box">
-        <form id="uploadForm">
+        <h3>Upload Single File</h3>
+        <form id="singleUploadForm">
             <input type="file" name="myFile" required>
             <button type="submit">Upload</button>
         </form>
-        <p id="uploadStatus"></p>
     </div>
+
+    <!-- Multiple files upload -->
+    <div class="upload-box">
+        <h3>Upload Multiple Files</h3>
+        <form id="multiUploadForm">
+            <input type="file" name="myFiles" multiple required>
+            <button type="submit">Upload</button>
+        </form>
+    </div>
+
+    <p id="uploadStatus" style="text-align:center;"></p>
 
     <h2>Uploaded Files</h2>
     <table id="filesTable">
@@ -107,14 +125,12 @@
     </table>
 
     <script>
-        const uploadForm = document.getElementById('uploadForm');
         const uploadStatus = document.getElementById('uploadStatus');
         const filesTableBody = document.querySelector('#filesTable tbody');
 
-        // Handle file upload
-        uploadForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(uploadForm);
+        // Generic upload handler for both forms
+        async function handleUpload(form) {
+            const formData = new FormData(form);
 
             try {
                 const res = await fetch('/upload', {
@@ -123,7 +139,7 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    uploadStatus.textContent = "✅ Upload successful!";
+                    uploadStatus.textContent = `✅ Uploaded ${data.files.length} file(s) successfully!`;
                     loadFiles();
                 } else {
                     uploadStatus.textContent = "❌ Upload failed: " + data.error;
@@ -131,6 +147,17 @@
             } catch (err) {
                 uploadStatus.textContent = "❌ Error uploading file.";
             }
+        }
+
+        // Hook up both forms
+        document.getElementById('singleUploadForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            handleUpload(e.target);
+        });
+
+        document.getElementById('multiUploadForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            handleUpload(e.target);
         });
 
         // Load files list
@@ -142,14 +169,21 @@
             files.forEach(file => {
                 const row = document.createElement('tr');
 
+                // Show thumbnail if image, otherwise text link
+                let previewContent;
+                if (file.type.startsWith("image/")) {
+                    previewContent = `<img class="thumb" src="/files/${file.name}" alt="${file.name}">`;
+                } else {
+                    previewContent = `<a class="preview-link" href="/files/${file.name}" target="_blank">View</a>`;
+                }
+
                 row.innerHTML = `
           <td>${file.name}</td>
           <td>${file.size}</td>
           <td>${file.type}</td>
-          <td><a class="preview-link" href="/files/${file.name}" target="_blank">View</a></td>
+          <td>${previewContent}</td>
           <td><button onclick="deleteFile('${file.name}')">Delete</button></td>
         `;
-
                 filesTableBody.appendChild(row);
             });
         }
