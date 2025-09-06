@@ -3,27 +3,174 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>File Manager</title>
-    <link rel="stylesheet" href="style.css">
+    <title>File Upload App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #f7f7f7;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .upload-box {
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        input[type="file"] {
+            margin: 10px 0;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            text-align: center;
+        }
+
+        th {
+            background: #007bff;
+            color: white;
+        }
+
+        td button {
+            background: #dc3545;
+        }
+
+        td button:hover {
+            background: #b02a37;
+        }
+
+        .preview-link {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .preview-link:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 
 <body>
-    <h1>📂 File Upload & Manager</h1>
+    <h1>📂 File Upload & Management</h1>
 
-    <section id="upload-section">
-        <h2>⬆ Upload a File</h2>
+    <div class="upload-box">
         <form id="uploadForm">
             <input type="file" name="myFile" required>
             <button type="submit">Upload</button>
         </form>
-    </section>
+        <p id="uploadStatus"></p>
+    </div>
 
-    <section id="files-section">
-        <h2>📄 Uploaded Files</h2>
-        <ul id="fileList"></ul>
-    </section>
+    <h2>Uploaded Files</h2>
+    <table id="filesTable">
+        <thead>
+            <tr>
+                <th>Filename</th>
+                <th>Size</th>
+                <th>Type</th>
+                <th>Preview</th>
+                <th>Delete</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
 
-    <script src="script.js"></script>
+    <script>
+        const uploadForm = document.getElementById('uploadForm');
+        const uploadStatus = document.getElementById('uploadStatus');
+        const filesTableBody = document.querySelector('#filesTable tbody');
+
+        // Handle file upload
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(uploadForm);
+
+            try {
+                const res = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    uploadStatus.textContent = "✅ Upload successful!";
+                    loadFiles();
+                } else {
+                    uploadStatus.textContent = "❌ Upload failed: " + data.error;
+                }
+            } catch (err) {
+                uploadStatus.textContent = "❌ Error uploading file.";
+            }
+        });
+
+        // Load files list
+        async function loadFiles() {
+            const res = await fetch('/files');
+            const files = await res.json();
+            filesTableBody.innerHTML = '';
+
+            files.forEach(file => {
+                const row = document.createElement('tr');
+
+                row.innerHTML = `
+          <td>${file.name}</td>
+          <td>${file.size}</td>
+          <td>${file.type}</td>
+          <td><a class="preview-link" href="/files/${file.name}" target="_blank">View</a></td>
+          <td><button onclick="deleteFile('${file.name}')">Delete</button></td>
+        `;
+
+                filesTableBody.appendChild(row);
+            });
+        }
+
+        // Delete file
+        async function deleteFile(filename) {
+            if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
+
+            const res = await fetch('/delete/' + filename, { method: 'POST' });
+            const data = await res.json();
+
+            if (data.success) {
+                loadFiles();
+            } else {
+                alert("❌ Error deleting file: " + data.error);
+            }
+        }
+
+        // Load files on page load
+        loadFiles();
+    </script>
 </body>
 
 </html>
