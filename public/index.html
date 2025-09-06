@@ -100,9 +100,16 @@
     </div>
 
     <h2>Uploaded Files</h2>
+    <div style="margin-bottom: 10px;">
+        <button id="deleteSelectedBtn"
+            style="background:#dc3545; padding:8px 12px; border:none; border-radius:5px; color:white; cursor:pointer;">
+            Delete Selected
+        </button>
+    </div>
     <table id="filesTable">
         <thead>
             <tr>
+                <th><input type="checkbox" id="selectAll"></th> <!-- master checkbox -->
                 <th>Filename</th>
                 <th>Size</th>
                 <th>Type</th>
@@ -117,6 +124,8 @@
         const uploadForm = document.getElementById('uploadForm');
         const uploadStatus = document.getElementById('uploadStatus');
         const filesTableBody = document.querySelector('#filesTable tbody');
+        const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+        const selectAll = document.getElementById('selectAll');
 
         // Handle file upload
         uploadForm.addEventListener('submit', async (e) => {
@@ -160,6 +169,7 @@
                 }
 
                 row.innerHTML = `
+          <td><input type="checkbox" class="fileCheckbox" value="${file.name}"></td>
           <td>${file.name}</td>
           <td>${file.size}</td>
           <td>${file.type}</td>
@@ -168,6 +178,9 @@
         `;
                 filesTableBody.appendChild(row);
             });
+
+            // Reset master checkbox each reload
+            selectAll.checked = false;
         }
 
         // Delete file
@@ -183,6 +196,39 @@
                 alert("❌ Error deleting file: " + data.error);
             }
         }
+
+        // Bulk delete
+        deleteSelectedBtn.addEventListener('click', async () => {
+            const selected = Array.from(document.querySelectorAll('.fileCheckbox:checked'))
+                .map(cb => cb.value);
+
+            if (selected.length === 0) {
+                alert("⚠️ No files selected");
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete ${selected.length} file(s)?`)) return;
+
+            const res = await fetch('/delete-many', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ files: selected })
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                loadFiles();
+            } else {
+                alert("❌ Error deleting files: " + data.error);
+            }
+        });
+
+        // Master checkbox (select/unselect all)
+        selectAll.addEventListener('change', () => {
+            const checkboxes = document.querySelectorAll('.fileCheckbox');
+            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+        });
 
         // Load files on page load
         loadFiles();

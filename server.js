@@ -8,6 +8,7 @@ const app = express();
 
 // ✅ Serve static files from "public"
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json()); // for parsing JSON requests
 
 // ✅ Upload Directory Setup
 const uploadDir = path.join(__dirname, 'uploads');
@@ -40,24 +41,12 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({ storage, fileFilter });
 
 // ✅ Handle single OR multiple file uploads
-app.post('/upload', upload.fields([
-    { name: 'myFile', maxCount: 1 },     // single file
-    { name: 'myFiles', maxCount: 10 }    // multiple files
-]), (req, res) => {
-    const allFiles = [];
-
-    if (req.files.myFile) {
-        allFiles.push(...req.files.myFile);
-    }
-    if (req.files.myFiles) {
-        allFiles.push(...req.files.myFiles);
-    }
-
-    if (allFiles.length === 0) {
+app.post('/upload', upload.array('myFiles', 20), (req, res) => {
+    if (!req.files || req.files.length === 0) {
         return res.status(400).json({ error: "No files uploaded" });
     }
 
-    const uploadedFiles = allFiles.map(file => ({
+    const uploadedFiles = req.files.map(file => ({
         originalName: file.originalname,
         filename: file.filename,
         size: (file.size / 1024).toFixed(2) + " KB",
@@ -94,7 +83,7 @@ app.get('/files/:filename', (req, res) => {
     }
 });
 
-// ✅ Handle file deletion
+// ✅ Handle single file deletion
 app.post('/delete/:filename', (req, res) => {
     const filePath = path.join(uploadDir, req.params.filename);
     if (fs.existsSync(filePath)) {
@@ -103,6 +92,29 @@ app.post('/delete/:filename', (req, res) => {
     } else {
         res.status(404).json({ error: "File not found" });
     }
+});
+
+// ✅ Handle bulk file deletion
+app.post('/delete-many', (req, res) => {
+    const { files } = req.body; // expects { "files": ["a.png", "b.pdf"] }
+
+    if (!Array.isArray(files) || files.length === 0) {
+        return res.status(400).json({ error: "No files provided for deletion" });
+    }
+
+    const results = [];
+
+    files.forEach(filename => {
+        const filePath = path.join(uploadDir, filename);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            results.push({ file: filename, deleted: true });
+        } else {
+            results.push({ file: filename, deleted: false, error: "File not found" });
+        }
+    });
+
+    res.json({ success: true, results });
 });
 
 // ✅ Error handling middleware
