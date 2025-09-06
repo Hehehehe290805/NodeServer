@@ -56,7 +56,7 @@ app.post('/upload', upload.array('myFiles', 20), (req, res) => {
     res.json({ success: true, files: uploadedFiles });
 });
 
-// ✅ List uploaded files with details
+// ✅ List uploaded files with details (newest first)
 app.get('/files', (req, res) => {
     fs.readdir(uploadDir, (err, files) => {
         if (err) return res.status(500).json({ error: "Error reading uploads folder" });
@@ -66,12 +66,22 @@ app.get('/files', (req, res) => {
             const stats = fs.statSync(filePath);
             const size = (stats.size / 1024).toFixed(2) + " KB";
             const type = mime.lookup(file) || "unknown";
-            return { name: file, size, type };
+            return {
+                name: file,
+                size,
+                type,
+                mtime: stats.mtime.getTime() // store modified time for sorting
+            };
         });
 
-        res.json(fileData);
+        // Sort newest first
+        fileData.sort((a, b) => b.mtime - a.mtime);
+
+        // Return without mtime field if you don’t want to expose it
+        res.json(fileData.map(({ name, size, type }) => ({ name, size, type })));
     });
 });
+
 
 // ✅ Serve uploaded files for preview/download
 app.get('/files/:filename', (req, res) => {
