@@ -3,8 +3,23 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const mime = require('mime-types');
-
+const axios = require('axios');
 const app = express();
+
+// Cat Facts API
+// ✅ Cat Facts route
+app.get("/catfact", async (req, res) => {
+    try {
+        const response = await axios.get("https://catfact.ninja/fact");
+        res.json({
+            success: true,
+            fact: response.data.fact
+        });
+    } catch (err) {
+        console.error("Error fetching cat fact:", err);
+        res.status(500).json({ success: false, error: "Failed to fetch cat fact" });
+    }
+});
 
 // ✅ Serve static files from "public"
 app.use(express.static(path.join(__dirname, 'public')));

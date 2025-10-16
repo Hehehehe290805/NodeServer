@@ -4,169 +4,12 @@
 <head>
   <meta charset="UTF-8">
   <title>File Upload App</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 40px;
-      background: #f7f7f7;
-    }
-
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-
-    .upload-box {
-      padding: 20px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-      margin-bottom: 30px;
-      text-align: center;
-    }
-
-    input[type="file"] {
-      margin: 10px 0;
-    }
-
-    button {
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #0056b3;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    th,
-    td {
-      padding: 12px;
-      border-bottom: 1px solid #ddd;
-      text-align: center;
-    }
-
-    th {
-      background: #007bff;
-      color: white;
-    }
-
-    td button {
-      background: #dc3545;
-    }
-
-    td button:hover {
-      background: #b02a37;
-    }
-
-    .preview-link {
-      color: #007bff;
-      text-decoration: none;
-    }
-
-    .preview-link:hover {
-      text-decoration: underline;
-    }
-
-    .thumb {
-      max-height: 60px;
-      border-radius: 4px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    }
-
-    /* ✅ Progress bar */
-    #progressWrapper {
-      width: 100%;
-      background: #ddd;
-      border-radius: 5px;
-      margin-top: 10px;
-      display: none;
-      height: 20px;
-      overflow: hidden;
-    }
-
-    #progressBar {
-      height: 100%;
-      width: 0%;
-      background: #28a745;
-      text-align: center;
-      color: white;
-      font-size: 12px;
-      line-height: 20px;
-      border-radius: 5px 0 0 5px;
-      transition: width 0.3s ease;
-    }
-
-    /* ✅ Popup Modal */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 9999;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      justify-content: center;
-      align-items: center;
-    }
-
-    .modal-content {
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      text-align: center;
-      width: 300px;
-    }
-
-    .modal-content p {
-      margin-bottom: 20px;
-    }
-
-    .modal-buttons {
-      display: flex;
-      justify-content: space-around;
-    }
-
-    .modal-buttons button {
-      flex: 1;
-      margin: 0 5px;
-      padding: 8px;
-    }
-
-    .btn-cancel {
-      background: #6c757d;
-    }
-
-    .btn-cancel:hover {
-      background: #565e64;
-    }
-
-    .btn-confirm {
-      background: #007bff;
-    }
-
-    .btn-confirm:hover {
-      background: #0056b3;
-    }
-  </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
   <h1>📂 File Upload & Management</h1>
 
-  <!-- Upload Box -->
   <div class="upload-box">
     <form id="uploadForm">
       <input type="file" name="myFiles" multiple required>
@@ -176,15 +19,16 @@
       <div id="progressBar">0%</div>
     </div>
     <p id="uploadStatus"></p>
+
+    <button id="catFactBtn">Get Cat Fact</button>
+    <p id="catFactDisplay"></p>
   </div>
 
   <h2>Uploaded Files</h2>
   <div style="margin-bottom: 10px;">
-    <button id="deleteSelectedBtn"
-      style="background:#dc3545; padding:8px 12px; border:none; border-radius:5px; color:white; cursor:pointer;">
-      Delete Selected
-    </button>
+    <button id="deleteSelectedBtn">Delete Selected</button>
   </div>
+
   <table id="filesTable">
     <thead>
       <tr>
@@ -199,7 +43,6 @@
     <tbody></tbody>
   </table>
 
-  <!-- ✅ Popup Modal -->
   <div id="popup" class="modal">
     <div class="modal-content">
       <p id="popupMessage"></p>
@@ -207,165 +50,7 @@
     </div>
   </div>
 
-  <script>
-    const uploadForm = document.getElementById('uploadForm');
-    const uploadStatus = document.getElementById('uploadStatus');
-    const filesTableBody = document.querySelector('#filesTable tbody');
-    const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
-    const selectAll = document.getElementById('selectAll');
-    const progressWrapper = document.getElementById('progressWrapper');
-    const progressBar = document.getElementById('progressBar');
-
-    const popup = document.getElementById("popup");
-    const popupMessage = document.getElementById("popupMessage");
-    const popupButtons = document.getElementById("popupButtons");
-
-    function showPopup(message, buttons = [{ text: "OK", class: "btn-confirm", action: () => hidePopup() }]) {
-      popupMessage.textContent = message;
-      popupButtons.innerHTML = "";
-      buttons.forEach(btn => {
-        const button = document.createElement("button");
-        button.textContent = btn.text;
-        button.className = btn.class;
-        button.onclick = () => { btn.action(); };
-        popupButtons.appendChild(button);
-      });
-      popup.style.display = "flex";
-    }
-
-    function hidePopup() {
-      popup.style.display = "none";
-    }
-
-    // ✅ File upload with progress
-    uploadForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const formData = new FormData(uploadForm);
-
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", "/upload", true);
-
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const percent = Math.round((event.loaded / event.total) * 100);
-          progressWrapper.style.display = "block";
-          progressBar.style.width = percent + "%";
-          progressBar.textContent = percent + "%";
-        }
-      };
-
-      xhr.onload = () => {
-        progressWrapper.style.display = "none";
-        progressBar.style.width = "0%";
-        progressBar.textContent = "0%";
-
-        if (xhr.status === 200) {
-          const data = JSON.parse(xhr.responseText);
-          if (data.success) {
-            uploadStatus.textContent = `✅ Uploaded ${data.files.length} file(s) successfully!`;
-            loadFiles();
-          } else {
-            showPopup("❌ Upload failed: " + data.error);
-          }
-        } else {
-          showPopup("❌ Error uploading file.");
-        }
-      };
-
-      xhr.send(formData);
-    });
-
-    // ✅ Load files
-    async function loadFiles() {
-      const res = await fetch('/files');
-      const files = await res.json();
-      filesTableBody.innerHTML = '';
-
-      files.forEach(file => {
-        const row = document.createElement('tr');
-
-        let previewContent;
-        if (file.type.startsWith("image/")) {
-          previewContent = `<a href="/files/${file.name}" target="_blank">
-                              <img class="thumb" src="/files/${file.name}" alt="${file.name}">
-                            </a>`;
-        } else {
-          previewContent = `<a class="preview-link" href="/files/${file.name}" target="_blank">View</a>`;
-        }
-
-        row.innerHTML = `
-          <td><input type="checkbox" class="fileCheckbox" value="${file.name}"></td>
-          <td>${file.name}</td>
-          <td>${file.size}</td>
-          <td>${file.type}</td>
-          <td>${previewContent}</td>
-          <td><button onclick="deleteFile('${file.name}')">Delete</button></td>
-        `;
-        filesTableBody.appendChild(row);
-      });
-
-      selectAll.checked = false;
-    }
-
-    // ✅ Delete single file
-    async function deleteFile(filename) {
-      showPopup(`Are you sure you want to delete ${filename}?`, [
-        { text: "Cancel", class: "btn-cancel", action: hidePopup },
-        {
-          text: "Delete", class: "btn-confirm", action: async () => {
-            hidePopup();
-            const res = await fetch('/delete/' + filename, { method: 'POST' });
-            const data = await res.json();
-            if (data.success) {
-              loadFiles();
-            } else {
-              showPopup("❌ Error deleting file: " + data.error);
-            }
-          }
-        }
-      ]);
-    }
-
-    // ✅ Bulk delete
-    deleteSelectedBtn.addEventListener('click', async () => {
-      const selected = Array.from(document.querySelectorAll('.fileCheckbox:checked'))
-        .map(cb => cb.value);
-
-      if (selected.length === 0) {
-        showPopup("⚠️ No files selected");
-        return;
-      }
-
-      showPopup(`Are you sure you want to delete ${selected.length} file(s)?`, [
-        { text: "Cancel", class: "btn-cancel", action: hidePopup },
-        {
-          text: "Delete", class: "btn-confirm", action: async () => {
-            hidePopup();
-            const res = await fetch('/delete-many', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ files: selected })
-            });
-            const data = await res.json();
-            if (data.success) {
-              loadFiles();
-            } else {
-              showPopup("❌ Error deleting files: " + data.error);
-            }
-          }
-        }
-      ]);
-    });
-
-    // ✅ Master checkbox
-    selectAll.addEventListener('change', () => {
-      const checkboxes = document.querySelectorAll('.fileCheckbox');
-      checkboxes.forEach(cb => cb.checked = selectAll.checked);
-    });
-
-    // ✅ Load files on startup
-    loadFiles();
-  </script>
+  <script src="script.js"></script>
 </body>
 
 </html>
